@@ -40,7 +40,7 @@ error_exit() {
 }
 
 # === Detect home directory of this app. and define more =============
-Homedir="$(d=${0%/*}/; [ "_$d" = "_$0/" ] && d='./'; cd "$d.."; pwd)"
+Homedir="$(d=${0%/*}/; case "$d" in ($0/) d='./'; esac; cd "$d.."; pwd)"
 PATH="$Homedir/UTL:$PATH"               # for additional command
 . "$Homedir/CONFIG/COMMON.SHLIB"        # account infomation
 
@@ -61,7 +61,7 @@ fi
 
 # === Print usage and exit if one of the help options is set =========
 case "$# ${1:-}" in
-  '1 -h'|'1 --help'|'1 --version') print_usage_and_exit;;
+  ('1 -h'|'1 --help'|'1 --version') print_usage_and_exit;;
 esac
 
 # === Initialize parameters ==========================================
@@ -72,12 +72,12 @@ timeout=''
 # === Read options ===================================================
 while :; do
   case "${1:-}" in
-    --rawout=*)  # for debug
+    (--rawout=*) # for debug
                  s=$(printf '%s' "${1#--rawout=}" | tr -d '\n')
                  rawoutputfile=$s
                  shift
                  ;;
-    --timeout=*) # for debug
+    (--timeout=*)# for debug
                  s=$(printf '%s' "${1#--timeout=}" | tr -d '\n')
                  printf '%s\n' "$s" | grep -q '^[0-9]\{1,\}$' || {
                    error_exit 1 'Invalid --timeout option'
@@ -85,21 +85,21 @@ while :; do
                  timeout=$s
                  shift
                  ;;
-    --*|-*)      error_exit 1 'Invalid option'
+    (--*|-*)     error_exit 1 'Invalid option'
                  ;;
-    *)           break
+    (*)          break
                  ;;
   esac
 done
 
 # === Get post-id ====================================================
 case $# in
-  0) print_usage_and_exit
+  (0)print_usage_and_exit
      ;;
-  1) printf '%s\n' "$1" | grep -Eq '^[0-9]+(_[0-9]+)?$' || print_usage_and_exit
+  (1)printf '%s\n' "$1" | grep -Eq '^[0-9]+(_[0-9]+)?$' || print_usage_and_exit
      postid=$1
      ;;
-  *) print_usage_and_exit
+  (*)print_usage_and_exit
      ;;
 esac
 
@@ -116,7 +116,7 @@ API_endpt="${API_endpt}?access_token=$ACCTOKEN_USER"
 
 # === Access to the endpoint =========================================
 # --- 1) Access to it
-res=$(if   [ -n "${CMD_WGET:-}" ]; then                #
+res=$(case "${CMD_WGET:-} ${CMD_CURL:-}" ] in          #
         [ -n "$timeout" ] && {                         #
           timeout="--connect-timeout=$timeout"         #
         }                                              #
@@ -130,9 +130,9 @@ res=$(if   [ -n "${CMD_WGET:-}" ]; then                #
         "$CMD_CURL" ${no_cert_curl:-} -s -X DELETE     \
                     $timeout                           \
                     "$API_endpt"                       #
-      fi                                               )
+      esac                                             )
 # --- 2) Exit immediately if it failed to access
-case $? in [!0]*) error_exit 1 'Failed to access API';; esac
+case $? in ([!0]*) error_exit 1 'Failed to access API';; esac
 
 # === Parse the response =============================================
 # --- 1.extract the required parameters from the response (written in JSON)
