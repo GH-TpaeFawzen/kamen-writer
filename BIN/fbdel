@@ -116,35 +116,35 @@ API_endpt="${API_endpt}?access_token=$ACCTOKEN_USER"
 
 # === Access to the endpoint =========================================
 # --- 1) Access to it
-res=$(case "${CMD_WGET:-} ${CMD_CURL:-}" ] in          #
-        [ -n "$timeout" ] && {                         #
+res=$(case "${#CMD_WGET:-} ${#CMD_CURL:-}" in ([!0]* *)#
+        case "$timeout" in (?*)                        #
           timeout="--connect-timeout=$timeout"         #
-        }                                              #
+        ;;esac                                         #
         "$CMD_WGET" ${no_cert_wget:-} -q -O -          \
                     --method=DELETE $timeout           \
                     "$API_endpt"                       #
-      elif [ -n "${CMD_CURL:-}" ]; then                #
-        [ -n "$timeout" ] && {                         #
+      ;;(0 [!0]*)                                      #
+        case "$timeout" in (?*)                        #
           timeout="--connect-timeout $timeout"         #
-        }                                              #
+        ;;esac                                         #
         "$CMD_CURL" ${no_cert_curl:-} -s -X DELETE     \
                     $timeout                           \
                     "$API_endpt"                       #
-      esac                                             )
+      ;;esac                                           )
 # --- 2) Exit immediately if it failed to access
 case $? in ([!0]*) error_exit 1 'Failed to access API';; esac
 
 # === Parse the response =============================================
 # --- 1.extract the required parameters from the response (written in JSON)
 printf '%s' "$res"                                                    |
-if [ -n "$rawoutputfile" ]; then tee "$rawoutputfile"; else cat; fi   |
+case "$rawoutputfile" in (?*) tee "$rawoutputfile";; (*) cat;; esac   |
 parsrj.sh 2>/dev/null                                                 |
 awk 'BEGIN             {sc=""                                      }  #
      $1~/^\$\.success$/{sc=$2; next;                               }  #
      END               {exit (sc=="true") ? 0 : 1;                 }'
 
 # === Print error message if some error occured ======================
-case $? in [!0]*)
+case $? in ([!0]*)
   err=$(echo "$res"                                                |
         parsrj.sh 2>/dev/null                                      |
         sed -n '/^\$\.error\./{s/^\$\.error\.//;p;}'               |
@@ -155,9 +155,9 @@ case $? in [!0]*)
              END          {if(f==0){exit 1;}                       #
                            printf("code:%d, type:%s/",ec,et);      #
                            print em;                             }')
-  [ -z "$err" ] || {
+  case "$err" in (?*)
     error_exit 1 "$(printf 'API error (%s)\n%s' "${err%%/*}" "${err#*/}")";
-  }
+  ;;esac
   error_exit 1 "API returned an unknown message: $res"
 ;; esac
 
